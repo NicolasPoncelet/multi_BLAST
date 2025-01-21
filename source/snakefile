@@ -1,0 +1,75 @@
+from script import output_files
+import yaml
+
+configfile:"config/config.yaml"
+
+path_to_yaml:Path = Path('config/config.yaml').resolve()
+
+with open(path_to_yaml, 'r') as infile:
+    config_yaml = yaml.load(infile, Loader=yaml.SafeLoader)
+
+ASSEMBLY_DIR = Path(config_yaml["assemblies_dir"]).resolve()
+QUERY_DIR = Path(config_yaml["queries_dir"]).resolve()
+OUTPUT_DIR = Path(config_yaml["analysis_dir"]).resolve()
+
+#Snakemake rules:
+
+rule all:
+    """Rule to execute the entire pipeline."""
+    input:
+        output_files.get()
+
+rule move_fasta:
+    """Move FASTA file into db dir. """
+    input:
+        assemblies = f"{ASSEMBLY_DIR}/{{assembly}}.fasta",
+    output:
+        fasta_files = f'{OUTPUT_DIR}/Database/{{assembly}}.fasta'
+    shell:
+        """
+        cp {input.assemblies} {output.fasta_files}
+        """
+
+rule make_BLAST_db:
+    """Create BLAST database from assembly."""
+    input:
+        assemblies = f'{OUTPUT_DIR}/Database/{{assembly}}.fasta'
+
+    output:
+        db_nto = f'{OUTPUT_DIR}/Database/{{assembly}}.nto',
+        db_ntf = f'{OUTPUT_DIR}/Database/{{assembly}}.ntf',
+        db_nsq = f'{OUTPUT_DIR}/Database/{{assembly}}.nsq',
+        db_not = f'{OUTPUT_DIR}/Database/{{assembly}}.not',
+        db_njs = f'{OUTPUT_DIR}/Database/{{assembly}}.njs',
+        db_nin = f'{OUTPUT_DIR}/Database/{{assembly}}.nin',
+        db_nhr = f'{OUTPUT_DIR}/Database/{{assembly}}.nhr',
+    conda:
+        "envs/blast.yaml"
+    shell:
+        """
+        makeblastdb \
+        -in {input.assemblies} \
+        -dbtype nucl \
+        -out {OUTPUT_DIR}/Database/{wildcards.assembly}
+        """
+
+
+rule BLAST_query:
+    """BLAST query in database"""
+    input:
+        db_files=rules.make_BLAST_db.output,  
+        query=f"{QUERY_DIR}/{{query}}.fasta",
+    output:
+        blast_out=f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt",
+    conda:
+        "envs/blast.yaml",
+    shell:
+        """
+        blastn \
+        -task blastn \
+        -query {input.query} \
+        -db {OUTPUT_DIR}/Database/{{wildcard.assembly}}\
+        -out {output.blast_out} \
+        -evalue 1e-5 \
+        -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq'
+        """

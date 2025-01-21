@@ -1,0 +1,10 @@
+# Configuration file for Multi_BLAST pipeline
+# -----------------------------------------
+# Input directories (specify paths to data files):
+
+assemblies_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Assemblies"
+queries_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Queries"
+
+# Output directory (specify where results will be saved):
+
+analysis_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Output"
