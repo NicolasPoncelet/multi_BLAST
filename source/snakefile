@@ -33,7 +33,7 @@ rule move_fasta:
 rule make_BLAST_db:
     """Create BLAST database from assembly."""
     input:
-        assemblies = f'{OUTPUT_DIR}/Database/{{assembly}}.fasta'
+        assemblies = rules.move_fasta.output.fasta_files 
 
     output:
         db_nto = f'{OUTPUT_DIR}/Database/{{assembly}}.nto',
@@ -57,18 +57,19 @@ rule make_BLAST_db:
 rule BLAST_query:
     """BLAST query in database"""
     input:
-        db_files=rules.make_BLAST_db.output,  
+        db_files=rules.make_BLAST_db.output, 
         query=f"{QUERY_DIR}/{{query}}.fasta",
+        assemblies=rules.move_fasta.output
     output:
-        blast_out=f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt",
+        blast_out=f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt"
     conda:
-        "envs/blast.yaml",
+        "envs/blast.yaml"
     shell:
         """
         blastn \
         -task blastn \
         -query {input.query} \
-        -db {OUTPUT_DIR}/Database/{{wildcard.assembly}}\
+        -db {OUTPUT_DIR}/Database/{wildcards.assembly} \
         -out {output.blast_out} \
         -evalue 1e-5 \
         -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq'
