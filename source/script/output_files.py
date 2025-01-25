@@ -18,29 +18,17 @@ def compile_outputs() -> dict[str:list[Path]] :
     queries_name:list[str] = [fasta.stem for fasta in path_to_queries.glob("*.fasta")]
     assemblies_name:list[str] = [fasta.stem for fasta in path_to_assemblies_dir.glob("*.fasta")]
 
-    # Static output in dict:
-
-    # all_outputs:dict[str:[list[Path]]] = {
-    #     "reference_report":[f"Ressources/references.csv"],
-    #     "fastq_report":[f"Ressources/fastq.csv"]    
-    # }
-    
     all_outputs = {}
 
-    # Make cartesion product for depth, flagstat, bai output.
+    # BLAST output: make cartesion product for assemblies and queries.
     all_combinations = list( product(assemblies_name,queries_name))
 
     all_blast_out = [f'{path_to_analysis_dir}/BLAST/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in all_combinations]
 
     all_outputs["blast_out"] = all_blast_out
-    
-    print("Assemblies:")
-    print(assemblies_name)
-    print("\nQueries:")
-    print(queries_name)
-    print("\nCombinations:")
-    print(all_combinations)
 
+    all_outputs["blast_report"] = [f'{path_to_analysis_dir}/BLAST/compiled_results.csv']
+    
     return all_outputs
 
 def unpack(final_dict:dict[list[Path]]) -> list[str] :
