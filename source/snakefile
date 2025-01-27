@@ -1,21 +1,22 @@
-from script import output_files
+from script import output_files, blast_results
 import yaml
+from pathlib import Path
 
-configfile:"config/config.yaml"
+configfile: "config/config.yaml"
 
-path_to_yaml:Path = Path('config/config.yaml').resolve()
-
-with open(path_to_yaml, 'r') as infile:
+# Chargement de la configuration
+with open(Path("config/config.yaml"), "r") as infile:
     config_yaml = yaml.load(infile, Loader=yaml.SafeLoader)
 
 ASSEMBLY_DIR = Path(config_yaml["assemblies_dir"]).resolve()
 QUERY_DIR = Path(config_yaml["queries_dir"]).resolve()
 OUTPUT_DIR = Path(config_yaml["analysis_dir"]).resolve()
 
-#Snakemake rules:
+# ---------------------------------------------------------------------------------
+# Règles Snakemake
+# ---------------------------------------------------------------------------------
 
 rule all:
-    """Rule to execute the entire pipeline."""
     input:
         output_files.get()
 
@@ -53,7 +54,6 @@ rule make_BLAST_db:
         -out {OUTPUT_DIR}/Database/{wildcards.assembly}
         """
 
-
 rule BLAST_query:
     """BLAST query in database"""
     input:
@@ -64,6 +64,8 @@ rule BLAST_query:
         blast_out=f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt"
     conda:
         "envs/blast.yaml"
+    params:
+        header = config_yaml["header_report"]
     shell:
         """
         blastn \
@@ -72,5 +74,27 @@ rule BLAST_query:
         -db {OUTPUT_DIR}/Database/{wildcards.assembly} \
         -out {output.blast_out} \
         -evalue 1e-5 \
-        -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq'
+        -outfmt '6 {params.header}'
         """
+
+rule BLAST_report:
+    input:
+        blasted_queries = expand(
+            f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt",
+            assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
+            query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
+        )
+    output:
+        compiled_report = f'{OUTPUT_DIR}/BLAST/compiled_results.csv'
+    params:
+        header = config_yaml["header_report"]  
+    run:
+        header_report = params.header.split()
+        blast_results.compile( 
+            f'{OUTPUT_DIR}/BLAST', 
+            output.compiled_report, 
+            header_report
+        ) 
+
+
+
