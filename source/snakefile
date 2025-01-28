@@ -1,5 +1,7 @@
 from script import output_files, blast_results
-import yaml
+from script.extract_utils import get_extracted_seqs 
+import yaml, numpy as np
+import pandas as pd
 from pathlib import Path
 
 configfile: "config/config.yaml"
@@ -18,7 +20,8 @@ OUTPUT_DIR = Path(config_yaml["analysis_dir"]).resolve()
 
 rule all:
     input:
-        output_files.get()
+        output_files.get(),
+        lambda wildcards: get_extracted_seqs(checkpoints.BLAST_report.get(**wildcards).output.compiled_report)
 
 rule move_fasta:
     """Move FASTA file into db dir. """
@@ -77,9 +80,9 @@ rule BLAST_query:
         -outfmt '6 {params.header}'
         """
 
-rule BLAST_report:
+checkpoint BLAST_report:
     input:
-        blasted_queries = expand(
+        expand(
             f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt",
             assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
             query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
@@ -87,14 +90,39 @@ rule BLAST_report:
     output:
         compiled_report = f'{OUTPUT_DIR}/BLAST/compiled_results.csv'
     params:
-        header = config_yaml["header_report"]  
+        header = config_yaml["header_report"]
     run:
         header_report = params.header.split()
-        blast_results.compile( 
-            f'{OUTPUT_DIR}/BLAST', 
-            output.compiled_report, 
+        blast_results.compile(
+            f'{OUTPUT_DIR}/BLAST',
+            output.compiled_report,
             header_report
-        ) 
+        )
 
+rule index_assembly:
+    input:
+        fasta = rules.move_fasta.output.fasta_files
+    output:
+        fai = f"{OUTPUT_DIR}/Database/{{assembly}}.fasta.fai"
+    shell:
+        "samtools faidx {input.fasta}"
 
+rule extract_sequences:
+    input:
+        fasta = rules.move_fasta.output.fasta_files
+    output:
+        "{OUTPUT_DIR}/Extracted_Seqs/{assembly}/{sseqid}_{sstart}-{send}_{strand}.fasta"
+    log:
+        "{OUTPUT_DIR}/logs/extract_sequences/{assembly}/{sseqid}_{sstart}-{send}_{strand}.log"
+    params:
+        region = lambda wildcards: f"{wildcards.sseqid}:{wildcards.sstart}-{wildcards.send}"
+    run:
 
+        reverse = wildcards.strand == "minus"
+
+        if reverse:
+            cmd = f"samtools faidx -i {input.fasta} {params.region} > {output} 2>> {log}"
+        else:
+            cmd = f"samtools faidx {input.fasta} {params.region} > {output} 2>> {log}"
+
+        shell(cmd)
