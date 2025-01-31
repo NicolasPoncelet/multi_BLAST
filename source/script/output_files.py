@@ -23,9 +23,6 @@ def compile_outputs() -> dict[str:list[Path]] :
     # BLAST output: make cartesion product for assemblies and queries.
     all_combinations = list( product(assemblies_name,queries_name))
 
-    #all_assemblies_indexed = [f'{path_to_analysis_dir}/Database/{assembly_name}.fasta.fai' for assembly_name in assemblies_name ]
-    #all_outputs["assembly_fai"] = all_assemblies_indexed
-
     all_blast_out = [f'{path_to_analysis_dir}/BLAST/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in all_combinations]
     all_outputs["blast_out"] = all_blast_out
 

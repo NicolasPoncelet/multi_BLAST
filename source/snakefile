@@ -54,7 +54,7 @@ rule make_BLAST_db:
         makeblastdb \
         -in {input.assemblies} \
         -dbtype nucl \
-        -out {OUTPUT_DIR}/Database/{wildcards.assembly}
+        -out {OUTPUT_DIR}/Database/{wildcards.assembly} 
         """
 
 rule BLAST_query:
@@ -93,6 +93,7 @@ checkpoint BLAST_report:
         header = config_yaml["header_report"]
     run:
         header_report = params.header.split()
+        
         blast_results.compile(
             f'{OUTPUT_DIR}/BLAST',
             output.compiled_report,
@@ -105,15 +106,14 @@ rule index_assembly:
     output:
         fai = f"{OUTPUT_DIR}/Database/{{assembly}}.fasta.fai"
     shell:
-        "samtools faidx {input.fasta}"
+        "samtools faidx {input.fasta} "
 
 rule extract_sequences:
     input:
         fasta = rules.move_fasta.output.fasta_files
     output:
         "{OUTPUT_DIR}/Extracted_Seqs/{assembly}/{sseqid}_{sstart}-{send}_{strand}.fasta"
-    log:
-        "{OUTPUT_DIR}/logs/extract_sequences/{assembly}/{sseqid}_{sstart}-{send}_{strand}.log"
+
     params:
         region = lambda wildcards: f"{wildcards.sseqid}:{wildcards.sstart}-{wildcards.send}"
     run:
@@ -121,8 +121,16 @@ rule extract_sequences:
         reverse = wildcards.strand == "minus"
 
         if reverse:
-            cmd = f"samtools faidx -i {input.fasta} {params.region} > {output} 2>> {log}"
+            cmd = f"samtools faidx -i {input.fasta} {params.region} > {output}"
         else:
-            cmd = f"samtools faidx {input.fasta} {params.region} > {output} 2>> {log}"
+            cmd = f"samtools faidx {input.fasta} {params.region} > {output}"
 
         shell(cmd)
+
+rule combine_FASTA:
+    input:
+        all_fasta = rules.extract_sequences.output
+    output:
+        combined_fasta = f"{OUTPUT_DIR}/Extracted_Seqs/combined.fasta"
+    run:
+        combine_fasta(all_fasta,combined_fasta)
