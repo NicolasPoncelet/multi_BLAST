@@ -2,6 +2,12 @@ from pathlib import Path
 from itertools import product
 import yaml
 
+def all_combinations(*args) -> list[tuple] :
+
+    cartesian_product = list( product(*args))
+
+    return cartesian_product
+
 def compile_outputs() -> dict[str:list[Path]] :
 
     path_to_yaml:Path = Path('config/config.yaml').resolve()
@@ -20,14 +26,43 @@ def compile_outputs() -> dict[str:list[Path]] :
 
     all_outputs = {}
 
-    # BLAST output: make cartesion product for assemblies and queries.
-    all_combinations = list( product(assemblies_name,queries_name))
+    # Common output files.
 
-    all_blast_out = [f'{path_to_analysis_dir}/BLAST/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in all_combinations]
-    all_outputs["blast_out"] = all_blast_out
+    common_combi:list[tuple] = all_combinations(assemblies_name,queries_name)
 
-    all_outputs["blast_report"] = [f'{path_to_analysis_dir}/BLAST/compiled_results.csv']
-    
+    # BLASTN output: make cartesian product for assemblies and queries.
+
+    if config_yaml["blast_type"] == "nucleotide" :
+
+        blast_db_ext:list[str] = ["nto","ntf","nsq","not","njs","nin","nhr"]
+
+        BLASTN_db_combi = all_combinations(assemblies_name,blast_db_ext)
+        
+        all_BLASTN_db = [f'{path_to_analysis_dir}/Database_nuc/{assembly_name}.{ext}' for assembly_name, ext in BLASTN_db_combi]
+        all_outputs["BLASTN_db"] = all_BLASTN_db
+
+        all_BLASTN_queries = [f'{path_to_analysis_dir}/BLASTN/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in common_combi]
+        all_outputs["BLASTN_out"] = all_BLASTN_queries
+
+        all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
+        all_outputs["BLASTN_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
+
+    # BLASTX output: make cartesian product for assemblies and queries.
+
+    if config_yaml["blast_type"] == "protein" :
+
+        blast_db_ext:list[str] = ["phr","pin","psq"]
+
+        BLASTX_db_combi = all_combinations(assemblies_name,blast_db_ext)
+        all_BLASTX_db = [f'{path_to_analysis_dir}/Database_x/{assembly_name}.{ext}' for assembly_name, ext in BLASTX_db_combi]
+        all_outputs["BLASTX_db"] = all_BLASTX_db
+
+        all_BLASTX_queries = [f'{path_to_analysis_dir}/BLASTX/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in common_combi]
+        all_outputs["BLASTX_out"] = all_BLASTX_queries
+
+        all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
+        all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
+
     return all_outputs
 
 def unpack(final_dict:dict[list[Path]]) -> list[str] :

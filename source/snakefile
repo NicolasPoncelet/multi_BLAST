@@ -1,4 +1,4 @@
-from script import output_files, blast_results
+from script import output_files, blast_results, fasta_utils
 from script.extract_utils import get_extracted_seqs 
 import yaml, numpy as np
 import pandas as pd
@@ -28,25 +28,25 @@ rule move_fasta:
     input:
         assemblies = f"{ASSEMBLY_DIR}/{{assembly}}.fasta",
     output:
-        fasta_files = f'{OUTPUT_DIR}/Database/{{assembly}}.fasta'
+        fasta_files = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.fasta'
     shell:
         """
         cp {input.assemblies} {output.fasta_files}
         """
 
-rule make_BLAST_db:
-    """Create BLAST database from assembly."""
+rule make_BLASTN_db:
+    """Create BLASTN Database from assembly."""
     input:
         assemblies = rules.move_fasta.output.fasta_files 
 
     output:
-        db_nto = f'{OUTPUT_DIR}/Database/{{assembly}}.nto',
-        db_ntf = f'{OUTPUT_DIR}/Database/{{assembly}}.ntf',
-        db_nsq = f'{OUTPUT_DIR}/Database/{{assembly}}.nsq',
-        db_not = f'{OUTPUT_DIR}/Database/{{assembly}}.not',
-        db_njs = f'{OUTPUT_DIR}/Database/{{assembly}}.njs',
-        db_nin = f'{OUTPUT_DIR}/Database/{{assembly}}.nin',
-        db_nhr = f'{OUTPUT_DIR}/Database/{{assembly}}.nhr',
+        db_nto = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.nto',
+        db_ntf = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.ntf',
+        db_nsq = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.nsq',
+        db_not = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.not',
+        db_njs = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.njs',
+        db_nin = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.nin',
+        db_nhr = f'{OUTPUT_DIR}/Database_nuc/{{assembly}}.nhr',
     conda:
         "envs/blast.yaml"
     shell:
@@ -54,17 +54,35 @@ rule make_BLAST_db:
         makeblastdb \
         -in {input.assemblies} \
         -dbtype nucl \
+        -out {OUTPUT_DIR}/Database_nuc/{wildcards.assembly} 
+        """
+
+rule make_BLASTX_db:
+    """Create BLAST database from assembly."""
+    input:
+        assemblies = rules.move_fasta.output.fasta_files 
+    output:
+        db_phr = f'{OUTPUT_DIR}/Database_x/{{assembly}}.phr',
+        db_pin = f'{OUTPUT_DIR}/Database_x/{{assembly}}.pin',
+        db_psq = f'{OUTPUT_DIR}/Database_x/{{assembly}}.psq',
+    conda:
+        "envs/blast.yaml"
+    shell:
+        """
+        makeblastdb \
+        -in {input.assemblies} \
+        -dbtype prot \
         -out {OUTPUT_DIR}/Database/{wildcards.assembly} 
         """
 
-rule BLAST_query:
-    """BLAST query in database"""
+rule BLASTN_query:
+    """BLASTN query in Database_nuc"""
     input:
-        db_files=rules.make_BLAST_db.output, 
+        db_files=rules.make_BLASTN_db.output, 
         query=f"{QUERY_DIR}/{{query}}.fasta",
         assemblies=rules.move_fasta.output
     output:
-        blast_out=f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt"
+        BLASTN_out=f"{OUTPUT_DIR}/BLASTN/{{assembly}}/{{query}}_out_blast.txt"
     conda:
         "envs/blast.yaml"
     params:
@@ -74,6 +92,28 @@ rule BLAST_query:
         blastn \
         -task blastn \
         -query {input.query} \
+        -db {OUTPUT_DIR}/Database_nuc/{wildcards.assembly} \
+        -out {output.BLASTN_out} \
+        -evalue 1e-5 \
+        -outfmt '6 {params.header}'
+        """
+
+rule BLASTX_query:
+    """BLASTX query in protein database"""
+    input:
+        db_files=rules.make_BLASTX_db.output, 
+        query=f"{QUERY_DIR}/{{query}}.fasta",
+        assemblies=rules.move_fasta.output
+    output:
+        blast_out=f"{OUTPUT_DIR}/BLASTX/{{assembly}}/{{query}}_out_blast.txt"
+    conda:
+        "envs/blast.yaml"
+    params:
+        header = config_yaml["header_report"]
+    shell:
+        """
+        blastx \
+        -query {input.query} \
         -db {OUTPUT_DIR}/Database/{wildcards.assembly} \
         -out {output.blast_out} \
         -evalue 1e-5 \
@@ -82,29 +122,43 @@ rule BLAST_query:
 
 checkpoint BLAST_report:
     input:
-        expand(
-            f"{OUTPUT_DIR}/BLAST/{{assembly}}/{{query}}_out_blast.txt",
+        blastn_files = expand(
+            f"{OUTPUT_DIR}/BLASTN/{{assembly}}/{{query}}_out_blast.txt",
             assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
             query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
-        )
+        ) if config_yaml["blast_type"] == "nucleotide" else [],
+        blastx_files = expand(
+            f"{OUTPUT_DIR}/BLASTX/{{assembly}}/{{query}}_out_blast.txt",
+            assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
+            query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
+        ) if config_yaml["blast_type"] == "protein" else []
     output:
-        compiled_report = f'{OUTPUT_DIR}/BLAST/compiled_results.csv'
+        compiled_report = f'{OUTPUT_DIR}/BLAST_results/compiled_results.csv'
     params:
         header = config_yaml["header_report"]
     run:
         header_report = params.header.split()
         
-        blast_results.compile(
-            f'{OUTPUT_DIR}/BLAST',
-            output.compiled_report,
-            header_report
-        )
+        if config_yaml["blast_type"] == "nucleotide":
+
+            blast_results.compile(
+                f'{OUTPUT_DIR}/BLASTN',
+                output.compiled_report,
+                header_report
+            )
+        else:
+
+            blast_results.compile(
+                f'{OUTPUT_DIR}/BLASTX',
+                output.compiled_report,
+                header_report
+            )
 
 rule index_assembly:
     input:
         fasta = rules.move_fasta.output.fasta_files
     output:
-        fai = f"{OUTPUT_DIR}/Database/{{assembly}}.fasta.fai"
+        fai = f"{OUTPUT_DIR}/Database_nuc/{{assembly}}.fasta.fai"
     shell:
         "samtools faidx {input.fasta} "
 
@@ -122,6 +176,7 @@ rule extract_sequences:
 
         if reverse:
             cmd = f"samtools faidx -i {input.fasta} {params.region} > {output}"
+            
         else:
             cmd = f"samtools faidx {input.fasta} {params.region} > {output}"
 
@@ -129,8 +184,10 @@ rule extract_sequences:
 
 rule combine_FASTA:
     input:
-        all_fasta = rules.extract_sequences.output
+        lambda wildcards: get_extracted_seqs(
+            checkpoints.BLAST_report.get(**wildcards).output.compiled_report
+        )
     output:
         combined_fasta = f"{OUTPUT_DIR}/Extracted_Seqs/combined.fasta"
     run:
-        combine_fasta(all_fasta,combined_fasta)
+        fasta_utils.combine_fasta(input,output.combined_fasta)
