@@ -12,9 +12,11 @@ analysis_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42
 # BLAST settings
 # -----------------------------------------
 
-blast_type: "nucleotide"  #  "nucleotide" or "protein"
+blast_type: "tblastx"  #  "blastn" or "tblastx"
 
-header_report: "qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
+#header_report: "qseqid sseqid  pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
+
+header_report: "qseqid sseqid  pident length qframe sframe sstrand mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
 
 # Possible header fields:
 # -----------------------------------------

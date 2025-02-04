@@ -32,7 +32,7 @@ def compile_outputs() -> dict[str:list[Path]] :
 
     # BLASTN output: make cartesian product for assemblies and queries.
 
-    if config_yaml["blast_type"] == "nucleotide" :
+    if config_yaml["blast_type"] == "blastn" :
 
         blast_db_ext:list[str] = ["nto","ntf","nsq","not","njs","nin","nhr"]
 
@@ -49,15 +49,15 @@ def compile_outputs() -> dict[str:list[Path]] :
 
     # BLASTX output: make cartesian product for assemblies and queries.
 
-    if config_yaml["blast_type"] == "protein" :
+    if config_yaml["blast_type"] == "tblastx" :
 
-        blast_db_ext:list[str] = ["phr","pin","psq"]
+        blast_db_ext:list[str] = ["nto","ntf","nsq","not","njs","nin","nhr"]
 
         BLASTX_db_combi = all_combinations(assemblies_name,blast_db_ext)
-        all_BLASTX_db = [f'{path_to_analysis_dir}/Database_x/{assembly_name}.{ext}' for assembly_name, ext in BLASTX_db_combi]
+        all_BLASTX_db = [f'{path_to_analysis_dir}/Database_nuc/{assembly_name}.{ext}' for assembly_name, ext in BLASTX_db_combi]
         all_outputs["BLASTX_db"] = all_BLASTX_db
 
-        all_BLASTX_queries = [f'{path_to_analysis_dir}/BLASTX/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in common_combi]
+        all_BLASTX_queries = [f'{path_to_analysis_dir}/TBLASTX/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in common_combi]
         all_outputs["BLASTX_out"] = all_BLASTX_queries
 
         all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]

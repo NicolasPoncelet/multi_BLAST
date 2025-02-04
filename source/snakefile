@@ -34,7 +34,7 @@ rule move_fasta:
         cp {input.assemblies} {output.fasta_files}
         """
 
-rule make_BLASTN_db:
+rule make_BLAST_db:
     """Create BLASTN Database from assembly."""
     input:
         assemblies = rules.move_fasta.output.fasta_files 
@@ -78,7 +78,7 @@ rule make_BLASTX_db:
 rule BLASTN_query:
     """BLASTN query in Database_nuc"""
     input:
-        db_files=rules.make_BLASTN_db.output, 
+        db_files=rules.make_BLAST_db.output, 
         query=f"{QUERY_DIR}/{{query}}.fasta",
         assemblies=rules.move_fasta.output
     output:
@@ -98,23 +98,23 @@ rule BLASTN_query:
         -outfmt '6 {params.header}'
         """
 
-rule BLASTX_query:
-    """BLASTX query in protein database"""
+rule TBLASTX_query:
+    """TBLASTX query in nucleotide database"""
     input:
-        db_files=rules.make_BLASTX_db.output, 
+        db_files=rules.make_BLAST_db.output, 
         query=f"{QUERY_DIR}/{{query}}.fasta",
         assemblies=rules.move_fasta.output
     output:
-        blast_out=f"{OUTPUT_DIR}/BLASTX/{{assembly}}/{{query}}_out_blast.txt"
+        blast_out=f"{OUTPUT_DIR}/TBLASTX/{{assembly}}/{{query}}_out_blast.txt"
     conda:
         "envs/blast.yaml"
     params:
         header = config_yaml["header_report"]
     shell:
         """
-        blastx \
+        tblastx \
         -query {input.query} \
-        -db {OUTPUT_DIR}/Database/{wildcards.assembly} \
+        -db {OUTPUT_DIR}/Database_nuc/{wildcards.assembly} \
         -out {output.blast_out} \
         -evalue 1e-5 \
         -outfmt '6 {params.header}'
@@ -126,12 +126,12 @@ checkpoint BLAST_report:
             f"{OUTPUT_DIR}/BLASTN/{{assembly}}/{{query}}_out_blast.txt",
             assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
             query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
-        ) if config_yaml["blast_type"] == "nucleotide" else [],
-        blastx_files = expand(
-            f"{OUTPUT_DIR}/BLASTX/{{assembly}}/{{query}}_out_blast.txt",
+        ) if config_yaml["blast_type"] == "blastn" else [],
+        tblastx_files = expand(
+            f"{OUTPUT_DIR}/TBLASTX/{{assembly}}/{{query}}_out_blast.txt",
             assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
             query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
-        ) if config_yaml["blast_type"] == "protein" else []
+        ) if config_yaml["blast_type"] == "tblastx" else []
     output:
         compiled_report = f'{OUTPUT_DIR}/BLAST_results/compiled_results.csv'
     params:
@@ -139,7 +139,7 @@ checkpoint BLAST_report:
     run:
         header_report = params.header.split()
         
-        if config_yaml["blast_type"] == "nucleotide":
+        if config_yaml["blast_type"] == "blastn":
 
             blast_results.compile(
                 f'{OUTPUT_DIR}/BLASTN',
@@ -149,7 +149,7 @@ checkpoint BLAST_report:
         else:
 
             blast_results.compile(
-                f'{OUTPUT_DIR}/BLASTX',
+                f'{OUTPUT_DIR}/TBLASTX',
                 output.compiled_report,
                 header_report
             )
