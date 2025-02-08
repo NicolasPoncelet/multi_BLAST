@@ -14,6 +14,15 @@ analysis_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42
 
 blast_type: "tblastn"  #  "blastn", tblastn or "tblastx"
 
+    # Query and assembly types for each BLAST mode
+    # --------------------------------------------|
+    # | BLAST Type  | Query Type  | Assembly Type |
+    # |------------|------------|-----------------|
+    # | blastn     | DNA        | DNA             |
+    # | tblastn    | Protein    | DNA             |
+    # | tblastx    | DNA        | DNA             |
+
+
 extraction:
     mode: "merged"  # "individual", "merged" or "none" 
     frame_handling: "both"  # "sframe", "qframe" ou "both"

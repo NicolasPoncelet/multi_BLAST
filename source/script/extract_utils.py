@@ -24,7 +24,7 @@ def get_extracted_seqs(report_path,config):
                 start=('start', 'min'),
                 end=('end', 'max')
         ).reset_index() 
-        print(df_sum)
+
         targets = []
 
         for _, row in df_sum.iterrows():
@@ -35,8 +35,6 @@ def get_extracted_seqs(report_path,config):
                 f"{row['sseqid']}_{row['start']}-{row['end']}_{row['strand']}.fasta"  
             )
             targets.append(path)
-
-            print(*targets, sep ="\n")
 
         return targets
     
@@ -78,9 +76,7 @@ def get_extracted_seqs(report_path,config):
                 f"{row['strand']}_{frame_str}.fasta"
             )
             targets.append(path)
-        
-        print(*targets, sep ="\n")
-        
+                
         return targets
 
     elif config["extraction"]["mode"] == "none" :
@@ -95,9 +91,7 @@ def get_extracted_seqs(report_path,config):
                 f"{row['sseqid']}_{row['sstart']}-{row['send']}_{row['strand']}.fasta"  
             )
             targets.append(path)
-        
-        print(*targets, sep ="\n")
-        
+                
         return targets
 # Test
 

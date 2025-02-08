@@ -20,7 +20,7 @@ def compile(input_directory: str, output_file: str, blast_output_columns: list) 
     None
         Writes a compiled CSV file to the specified output directory.
     """
-    print(f'{input_directory=}, {output_file=}, {blast_output_columns=}')
+
     input_dir_path = Path(input_directory).resolve()
     output_path = Path(output_file).resolve()
 

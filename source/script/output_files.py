@@ -45,7 +45,7 @@ def compile_outputs() -> dict[str:list[Path]] :
         all_outputs["BLASTN_out"] = all_BLASTN_queries
 
         all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
-        all_outputs["BLASTN_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
+        all_outputs["BLASTN_report"] = [f'{path_to_analysis_dir}/BLASTN/compiled_results.csv']
 
     # BLASTX output: make cartesian product for assemblies and queries.
 
@@ -61,7 +61,7 @@ def compile_outputs() -> dict[str:list[Path]] :
         all_outputs["BLASTX_out"] = all_BLASTX_queries
 
         all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
-        all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
+        all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/TBLASTX/compiled_results.csv']
 
     # BLASTX output: make cartesian product for assemblies and queries.
 
@@ -77,7 +77,7 @@ def compile_outputs() -> dict[str:list[Path]] :
         all_outputs["TBLASTN_out"] = all_TBLASTN_queries
 
         all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
-        all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
+        all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/TBLASTN/compiled_results.csv']
 
 
     return all_outputs

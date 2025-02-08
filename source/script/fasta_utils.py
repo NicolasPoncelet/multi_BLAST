@@ -28,9 +28,3 @@ def combine_fasta(list_of_fasta:list,output_file:str) -> None :
             
             outfile.write("\n")
             
-
-# dir = "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Output/Extracted_Seqs"
-# dir = Path(dir).rglob("*/*.fasta")
-# final = Path()/"test.fasta"
-
-# combine_fasta(dir,final)

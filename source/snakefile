@@ -8,12 +8,20 @@ from pathlib import Path
 configfile: "config/config.yaml"
 
 # Chargement de la configuration
+
 with open(Path("config/config.yaml"), "r") as infile:
     config_yaml = yaml.load(infile, Loader=yaml.SafeLoader)
 
 ASSEMBLY_DIR = Path(config_yaml["assemblies_dir"]).resolve()
 QUERY_DIR = Path(config_yaml["queries_dir"]).resolve()
 OUTPUT_DIR = Path(config_yaml["analysis_dir"]).resolve()
+
+REPORT_PATH = {
+    "blastn": OUTPUT_DIR / "BLASTN",
+    "tblastn": OUTPUT_DIR / "TBLASTN",
+    "tblastx": OUTPUT_DIR / "TBLASTX"
+}.get(config_yaml["blast_type"], "")
+
 
 # ---------------------------------------------------------------------------------
 # Règles Snakemake
@@ -56,24 +64,6 @@ rule make_BLAST_db:
         -in {input.assemblies} \
         -dbtype nucl \
         -out {OUTPUT_DIR}/Database_nuc/{wildcards.assembly} 
-        """
-
-rule make_BLASTX_db:
-    """Create BLAST database from assembly."""
-    input:
-        assemblies = rules.move_fasta.output.fasta_files 
-    output:
-        db_phr = f'{OUTPUT_DIR}/Database_x/{{assembly}}.phr',
-        db_pin = f'{OUTPUT_DIR}/Database_x/{{assembly}}.pin',
-        db_psq = f'{OUTPUT_DIR}/Database_x/{{assembly}}.psq',
-    conda:
-        "envs/blast.yaml"
-    shell:
-        """
-        makeblastdb \
-        -in {input.assemblies} \
-        -dbtype prot \
-        -out {OUTPUT_DIR}/Database/{wildcards.assembly} 
         """
 
 rule BLASTN_query:
@@ -160,10 +150,10 @@ checkpoint BLAST_report:
             assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
             query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
         ) if config_yaml["blast_type"] == "tblastn" else []
-    output:
-        compiled_report = f'{OUTPUT_DIR}/BLAST_results/compiled_results.csv'
     params:
         header = config_yaml["header_report"]
+    output:
+        compiled_report = f"{REPORT_PATH}/compiled_results.csv"
     run:
         header_report = params.header.split()
         
