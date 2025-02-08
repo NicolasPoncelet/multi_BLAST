@@ -1,5 +1,6 @@
 from script import output_files, blast_results, fasta_utils
 from script.extract_utils import get_extracted_seqs 
+from script.output_extract_files import generate_output_path
 import yaml, numpy as np
 import pandas as pd
 from pathlib import Path
@@ -21,7 +22,7 @@ OUTPUT_DIR = Path(config_yaml["analysis_dir"]).resolve()
 rule all:
     input:
         output_files.get(),
-        lambda wildcards: get_extracted_seqs(checkpoints.BLAST_report.get(**wildcards).output.compiled_report)
+        lambda wildcards: get_extracted_seqs(checkpoints.BLAST_report.get(**wildcards).output.compiled_report,config_yaml)
 
 rule move_fasta:
     """Move FASTA file into db dir. """
@@ -120,6 +121,28 @@ rule TBLASTX_query:
         -outfmt '6 {params.header}'
         """
 
+rule TBLASTN_query:
+    """TBLASTN query in nucleotide database"""
+    input:
+        db_files=rules.make_BLAST_db.output, 
+        query=f"{QUERY_DIR}/{{query}}.fasta",
+        assemblies=rules.move_fasta.output
+    output:
+        blast_out=f"{OUTPUT_DIR}/TBLASTN/{{assembly}}/{{query}}_out_blast.txt"
+    conda:
+        "envs/blast.yaml"
+    params:
+        header = config_yaml["header_report"]
+    shell:
+        """
+        tblastn \
+        -query {input.query} \
+        -db {OUTPUT_DIR}/Database_nuc/{wildcards.assembly} \
+        -out {output.blast_out} \
+        -evalue 1e-5 \
+        -outfmt '6 {params.header}'
+        """
+
 checkpoint BLAST_report:
     input:
         blastn_files = expand(
@@ -131,7 +154,12 @@ checkpoint BLAST_report:
             f"{OUTPUT_DIR}/TBLASTX/{{assembly}}/{{query}}_out_blast.txt",
             assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
             query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
-        ) if config_yaml["blast_type"] == "tblastx" else []
+        ) if config_yaml["blast_type"] == "tblastx" else [],
+        tblastn_files = expand(
+            f"{OUTPUT_DIR}/TBLASTN/{{assembly}}/{{query}}_out_blast.txt",
+            assembly=[a.stem for a in ASSEMBLY_DIR.glob("*.fasta")],
+            query=[q.stem for q in QUERY_DIR.glob("*.fasta")]
+        ) if config_yaml["blast_type"] == "tblastn" else []
     output:
         compiled_report = f'{OUTPUT_DIR}/BLAST_results/compiled_results.csv'
     params:
@@ -146,14 +174,20 @@ checkpoint BLAST_report:
                 output.compiled_report,
                 header_report
             )
-        else:
+        elif config_yaml["blast_type"] == "tblastx":
 
             blast_results.compile(
                 f'{OUTPUT_DIR}/TBLASTX',
                 output.compiled_report,
                 header_report
             )
+        elif config_yaml["blast_type"] == "tblastn":
 
+            blast_results.compile(
+                f'{OUTPUT_DIR}/TBLASTN',
+                output.compiled_report,
+                header_report
+            )
 rule index_assembly:
     input:
         fasta = rules.move_fasta.output.fasta_files
@@ -162,12 +196,13 @@ rule index_assembly:
     shell:
         "samtools faidx {input.fasta} "
 
+# Files are coming from extract_utils in rule all.
+
 rule extract_sequences:
     input:
         fasta = rules.move_fasta.output.fasta_files
     output:
-        "{OUTPUT_DIR}/Extracted_Seqs/{assembly}/{sseqid}_{sstart}-{send}_{strand}.fasta"
-
+        generate_output_path(config_yaml) # generate path and wildcards pattern regarding config extraction selection.
     params:
         region = lambda wildcards: f"{wildcards.sseqid}:{wildcards.sstart}-{wildcards.send}"
     run:
@@ -185,7 +220,8 @@ rule extract_sequences:
 rule combine_FASTA:
     input:
         lambda wildcards: get_extracted_seqs(
-            checkpoints.BLAST_report.get(**wildcards).output.compiled_report
+            checkpoints.BLAST_report.get(**wildcards).output.compiled_report,
+            config_yaml
         )
     output:
         combined_fasta = f"{OUTPUT_DIR}/Extracted_Seqs/combined.fasta"

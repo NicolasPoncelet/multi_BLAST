@@ -63,6 +63,23 @@ def compile_outputs() -> dict[str:list[Path]] :
         all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
         all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
 
+    # BLASTX output: make cartesian product for assemblies and queries.
+
+    if config_yaml["blast_type"] == "tblastn" :
+
+        blast_db_ext:list[str] = ["nto","ntf","nsq","not","njs","nin","nhr"]
+
+        TBLASTN_db_combi = all_combinations(assemblies_name,blast_db_ext)
+        all_TBLASTN_db = [f'{path_to_analysis_dir}/Database_nuc/{assembly_name}.{ext}' for assembly_name, ext in TBLASTN_db_combi]
+        all_outputs["TBLASTN_db"] = all_TBLASTN_db
+
+        all_TBLASTN_queries = [f'{path_to_analysis_dir}/TBLASTN/{assembly_name}/{query}_out_blast.txt' for assembly_name, query in common_combi]
+        all_outputs["TBLASTN_out"] = all_TBLASTN_queries
+
+        all_outputs["final_fasta"] = [f"{path_to_analysis_dir}/Extracted_Seqs/combined.fasta"]
+        all_outputs["BLASTX_report"] = [f'{path_to_analysis_dir}/BLAST_results/compiled_results.csv']
+
+
     return all_outputs
 
 def unpack(final_dict:dict[list[Path]]) -> list[str] :

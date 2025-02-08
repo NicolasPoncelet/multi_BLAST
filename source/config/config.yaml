@@ -2,21 +2,23 @@
 # -----------------------------------------
 # Input directories (specify paths to data files):
 
-assemblies_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Assemblies"
-queries_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Queries"
+assemblies_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/TBLASTN/Assemblies"
+queries_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/TBLASTN/Queries"
 
 # Output directory (specify where results will be saved):
 
-analysis_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/Output"
+analysis_dir: "/home/nponcelet/Documents/03-Script/00_Projet_Perso/02_Bioinfo/42_Multi_BLAST/Test_data/TBLASTN/Output"
 
 # BLAST settings
 # -----------------------------------------
 
-blast_type: "tblastx"  #  "blastn" or "tblastx"
+blast_type: "tblastn"  #  "blastn", tblastn or "tblastx"
 
-#header_report: "qseqid sseqid  pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
+extraction:
+    mode: "merged"  # "individual", "merged" or "none" 
+    frame_handling: "both"  # "sframe", "qframe" ou "both"
 
-header_report: "qseqid sseqid  pident length qframe sframe sstrand mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
+header_report: "qseqid sseqid pident length qframe sframe sstrand mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
 
 # Possible header fields:
 # -----------------------------------------

@@ -33,17 +33,18 @@ def compile(input_directory: str, output_file: str, blast_output_columns: list) 
     for result_file in blast_result_files:
         query_name: str = result_file.stem
         assembly_name: str = result_file.parent.name
-        result_record: dict = {"Assembly": assembly_name, "Query": query_name}
 
         with open(result_file, "r") as infile:
 
             for line in infile:
 
+                result_record: dict = {"Assembly": assembly_name, "Query": query_name}
+
                 cells = line.strip().split("\t")
                 parsed_line = dict(zip(blast_output_columns, cells))
                 result_record.update(parsed_line)
 
-            aggregated_results.append(result_record)
+                aggregated_results.append(result_record)
 
     results_dataframe: pd.DataFrame = pd.DataFrame.from_dict(aggregated_results)
     results_dataframe.to_csv(output_path, columns=output_csv_header, index=False)
